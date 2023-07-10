@@ -1,3 +1,4 @@
+import { clearAuth } from "@/app/features/auth/authSlice";
 import {
   selectSidebarVisible,
   toggleSidebar
@@ -14,12 +15,13 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { auth } from "@/firebase.config";
-import { Home, LogOut, User } from "lucide-react";
+import { resetPassword } from "@/services/firebase/auth.service";
+import { Home, Lock, LogOut, User } from "lucide-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent } from "../ui/sheet";
-import { clearAuth } from "@/app/features/auth/authSlice";
+import { useToast } from "../ui/use-toast";
 
 type Props = {};
 
@@ -27,7 +29,10 @@ const Sidebar = (props: Props) => {
   const isSidebarVisible = useAppSelector(selectSidebarVisible);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isConfirmLogoutVisible, setIsConfirmLogoutVisible] =
+    React.useState(false);
+  const [isConfirmResetPassword, setIsConfirmResetPassword] =
     React.useState(false);
 
   const options = [
@@ -43,6 +48,13 @@ const Sidebar = (props: Props) => {
       label: "Profile",
       onClick: (option) => {
         navigate("/dashboard/profile");
+      }
+    },
+    {
+      icon: <Lock className="mr-2 h-4 w-4" />,
+      label: "Reset password",
+      onClick: (option) => {
+        setIsConfirmResetPassword(true);
       }
     },
     {
@@ -99,6 +111,40 @@ const Sidebar = (props: Props) => {
               onClick={async () => {
                 await auth.signOut();
                 dispatch(clearAuth());
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Confirm Reset Password */}
+      <AlertDialog
+        open={isConfirmResetPassword}
+        onOpenChange={() => {
+          setIsConfirmResetPassword(!isConfirmResetPassword);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Are you sure you want to reset your password?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              An email will be sent to your registered email address to reset
+              your password, click on the link provided in the email.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await resetPassword({
+                  toast,
+                  dispatch
+                });
+
+                await auth.signOut();
               }}
             >
               Confirm
