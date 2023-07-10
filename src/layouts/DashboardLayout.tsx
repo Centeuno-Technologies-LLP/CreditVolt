@@ -1,6 +1,5 @@
 import Header from "@/components/common/Header";
 import Sidebar from "@/components/common/Sidebar";
-import React from "react";
 import { Outlet } from "react-router-dom";
 
 type Props = {};
