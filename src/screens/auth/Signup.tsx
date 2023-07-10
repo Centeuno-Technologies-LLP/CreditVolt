@@ -15,7 +15,10 @@ import { Link } from "react-router-dom";
 import { z } from "zod";
 import AppLogo from "../../assets/creditvolt.png";
 import { Helmet } from "react-helmet-async";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification
+} from "firebase/auth";
 import { auth, handleFirebaseError } from "@/firebase.config";
 import { selectLoading, setLoading } from "@/app/features/common/commonSlice";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
@@ -66,13 +69,29 @@ const Signup = (props: Props) => {
         auth,
         values.email,
         values.password
-      ).then((userCredential) => {
+      ).then(async (userCredential) => {
         const user = userCredential.user;
 
         dispatch(
           setLoading({
+            isLoading: true,
+            message: "Sending Verification Email..."
+          })
+        );
+
+        await sendEmailVerification(user).then(() => {
+          toast({
+            title: "Email verification sent.",
+            description: "Please check your email to verify your account.",
+            variant: "default",
+            duration: 2000
+          });
+        });
+
+        dispatch(
+          setLoading({
             isLoading: false,
-            message: "Creating account..."
+            message: ""
           })
         );
       });
@@ -84,12 +103,19 @@ const Signup = (props: Props) => {
           variant: "destructive",
           duration: 2000
         });
+      } else {
+        toast({
+          title: "Error",
+          description: "Error: " + handleFirebaseError(err),
+          variant: "destructive",
+          duration: 2000
+        });
       }
 
       dispatch(
         setLoading({
           isLoading: false,
-          message: "Creating account..."
+          message: ""
         })
       );
     }
