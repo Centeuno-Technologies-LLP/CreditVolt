@@ -1,5 +1,15 @@
-import { selectLoading, setLoading } from "@/app/features/common/commonSlice";
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { setLoading } from "@/app/features/common/commonSlice";
+import { useAppDispatch } from "@/app/hooks";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -12,35 +22,57 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { auth, handleFirebaseError } from "@/firebase.config";
+import { resetPassword } from "@/services/firebase/auth.service";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import React from "react";
 import { Helmet } from "react-helmet-async";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import * as z from "zod";
 import AppLogo from "../../assets/creditvolt.png";
 
 type Props = {};
 
 const formSchema = z.object({
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters."
+  email: z.string().email({
+    message: "Please enter a valid email."
   }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters."
   })
 });
 
+const resetPasswordFormSchema = z.object({
+  email: z
+    .string()
+    .email({
+      message: "Please enter a valid email."
+    })
+    .min(6, {
+      message: "Please enter a valid email."
+    })
+});
+
 const Login = (props: Props) => {
-  const loading = useAppSelector(selectLoading);
   const dispatch = useAppDispatch();
+  const location = useLocation();
   const { toast } = useToast();
+  const [isConfirmResetPassword, setIsConfirmResetPassword] =
+    React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: ""
+    }
+  });
+
+  const resetPasswordForm = useForm<z.infer<typeof resetPasswordFormSchema>>({
+    resolver: zodResolver(resetPasswordFormSchema),
+    defaultValues: {
+      email: ""
     }
   });
 
@@ -55,7 +87,7 @@ const Login = (props: Props) => {
     try {
       await signInWithEmailAndPassword(
         auth,
-        values.username,
+        values.email,
         values.password
       ).then((userCredential) => {
         const user = userCredential.user;
@@ -107,6 +139,18 @@ const Login = (props: Props) => {
     }
   }
 
+  async function resetPasswordOnSubmit(
+    values: z.infer<typeof resetPasswordFormSchema>
+  ) {
+    await resetPassword(
+      {
+        toast,
+        dispatch
+      },
+      values.email
+    );
+  }
+
   return (
     <>
       <Helmet>
@@ -125,7 +169,7 @@ const Login = (props: Props) => {
             <h4 className="font-bold text-2xl">Login.</h4>
             <FormField
               control={form.control}
-              name="username"
+              name="email"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
@@ -140,13 +184,19 @@ const Login = (props: Props) => {
               control={form.control}
               name="password"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Password" type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <>
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Password"
+                        type="password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                </>
               )}
             />
             <Button className="w-full" type="submit">
@@ -160,7 +210,63 @@ const Login = (props: Props) => {
             Signup.
           </Link>
         </h5>
+        <div className="flex items-center justify-center text-blue-500 text-xs">
+          <Button
+            variant="link"
+            className="p-1"
+            onClick={() => {
+              setIsConfirmResetPassword(!isConfirmResetPassword);
+            }}
+          >
+            Forgot Password?
+          </Button>
+        </div>
       </div>
+      {/* Confirm Reset Password */}
+      <AlertDialog
+        open={isConfirmResetPassword}
+        onOpenChange={() => {
+          setIsConfirmResetPassword(!isConfirmResetPassword);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Are you sure you want to reset your password?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              An email will be sent to your registered email address to reset
+              your password, click on the link provided in the email.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Form {...resetPasswordForm}>
+            <form
+              onSubmit={resetPasswordForm.handleSubmit(resetPasswordOnSubmit)}
+              className="space-y-4"
+            >
+              <FormField
+                control={resetPasswordForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: john.doe@gmail.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full">
+                Send Reset Password Email
+              </Button>
+            </form>
+          </Form>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
