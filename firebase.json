@@ -56,8 +56,5 @@
       "port": 4200
     },
     "singleProjectMode": true
-  },
-  "remoteconfig": {
-    "template": "remoteconfig.template.json"
   }
 }
